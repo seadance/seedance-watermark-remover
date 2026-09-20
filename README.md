@@ -8,6 +8,10 @@ The tool runs on CPU, keeps video processing on your machine, preserves the
 original audio stream, and provides a manual selection fallback when automatic
 detection is not confident enough.
 
+Prefer a browser-based workflow? Try the
+[Seedance Watermark Remover](https://seadance.app/seedance-watermark-remover)
+on Seadance AI.
+
 > [!IMPORTANT]
 > Only remove watermarks from content you own or have permission to modify.
 > This project removes visible pixels; it does not attempt to remove provenance,
