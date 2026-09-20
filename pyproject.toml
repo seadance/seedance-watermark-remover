@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "seedance-watermark-remover"
+version = "0.1.0"
+description = "Remove visible corner watermarks from Seedance videos locally with OpenCV and FFmpeg."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "AIWaveRider42" }]
+keywords = [
+  "seedance watermark remover",
+  "remove seedance 2.5 watermark",
+  "video watermark removal",
+  "opencv",
+  "ffmpeg",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Multimedia :: Video",
+]
+dependencies = [
+  "numpy>=1.24,<3",
+  "opencv-python-headless>=4.8,<5",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+  "pytest-cov>=5,<7",
+  "ruff>=0.8,<1",
+]
+
+[project.scripts]
+seedance-watermark-remover = "seedance_watermark_remover.cli:main"
+
+[project.urls]
+Repository = "https://github.com/seadance/seedance-watermark-remover"
+Issues = "https://github.com/seadance/seedance-watermark-remover/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/seedance_watermark_remover"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
