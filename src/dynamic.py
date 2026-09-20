@@ -16,6 +16,21 @@ _DOLA_TEMPLATE = np.unpackbits(
 ).reshape(32, 128)
 
 
+def _wordmark_template(text: str) -> np.ndarray:
+    canvas = np.zeros((64, 320), dtype=np.uint8)
+    cv2.putText(
+        canvas,
+        text,
+        (4, 42),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.82,
+        255,
+        2,
+        cv2.LINE_AA,
+    )
+    return _normalize_shape(canvas)
+
+
 @dataclass(frozen=True)
 class DynamicDetection:
     region: Region
@@ -126,7 +141,7 @@ def _text_candidate(
             area >= 8
             and component_height >= min_height
             and component_height <= height * 0.58
-            and component_width <= width * 0.32
+            and component_width <= width * 0.84
         ):
             components.append(
                 (component_id, x, y, component_width, component_height, area)
@@ -140,9 +155,6 @@ def _text_candidate(
             for item in components
             if abs((item[2] + item[4] / 2) - target_y) <= height * 0.18
         ]
-        if len(aligned) < 3:
-            continue
-
         x1 = min(item[1] for item in aligned)
         y1 = min(item[2] for item in aligned)
         x2 = max(item[1] + item[3] for item in aligned)
@@ -152,6 +164,8 @@ def _text_candidate(
         width_fraction = box_width / width
         height_fraction = box_height / height
         density = sum(item[5] for item in aligned) / max(1, box_width * box_height)
+        if len(aligned) < 3 and width_fraction < 0.40:
+            continue
 
         confidence = _candidate_confidence(
             len(aligned), width_fraction, height_fraction, density
@@ -193,6 +207,8 @@ def _candidate_confidence(
     density: float,
 ) -> float:
     count_score = min(component_count / 6, 1.0)
+    if width_fraction >= 0.40:
+        count_score = max(count_score, 0.65)
     width_score = _ramp(width_fraction, 0.20, 0.50) * _falloff(
         width_fraction, 0.72, 0.84
     )
@@ -221,14 +237,19 @@ def _overlap_ratio(left: Region, right: Region) -> float:
 
 
 def _shape_similarity(mask: np.ndarray) -> float:
+    normalized = _normalize_shape(mask)
+    return max(_dice_similarity(normalized, template) for template in _WORDMARK_TEMPLATES)
+
+
+def _normalize_shape(mask: np.ndarray) -> np.ndarray:
     y_indices, x_indices = np.where(mask > 0)
     if not len(x_indices):
-        return 0.0
+        return np.zeros((32, 128), dtype=bool)
     glyphs = mask[
         y_indices.min() : y_indices.max() + 1,
         x_indices.min() : x_indices.max() + 1,
     ]
-    target_height, target_width = _DOLA_TEMPLATE.shape
+    target_height, target_width = 32, 128
     scale = min(
         (target_width - 4) / glyphs.shape[1],
         (target_height - 4) / glyphs.shape[0],
@@ -240,10 +261,19 @@ def _shape_similarity(mask: np.ndarray) -> float:
         (resized_width, resized_height),
         interpolation=cv2.INTER_AREA,
     ) > 64
-    normalized = np.zeros_like(_DOLA_TEMPLATE, dtype=bool)
+    normalized = np.zeros((target_height, target_width), dtype=bool)
     x = (target_width - resized_width) // 2
     y = (target_height - resized_height) // 2
     normalized[y : y + resized_height, x : x + resized_width] = resized
-    template = _DOLA_TEMPLATE > 0
-    intersection = np.logical_and(normalized, template).sum()
-    return float(2 * intersection / max(1, normalized.sum() + template.sum()))
+    return normalized
+
+
+def _dice_similarity(left: np.ndarray, right: np.ndarray) -> float:
+    intersection = np.logical_and(left, right).sum()
+    return float(2 * intersection / max(1, left.sum() + right.sum()))
+
+
+_WORDMARK_TEMPLATES = (
+    _DOLA_TEMPLATE > 0,
+    _wordmark_template("seadance.app"),
+)

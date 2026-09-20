@@ -68,6 +68,26 @@ def test_detects_dynamic_badge_at_middle_left_edge() -> None:
     assert np.any(results[0].mask)
 
 
+def test_detects_seadance_app_badge_at_bottom_right_edge() -> None:
+    frame = np.full((720, 1280, 3), (35, 45, 60), dtype=np.uint8)
+    cv2.putText(
+        frame,
+        "seadance.app",
+        (1070, 680),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.82,
+        (230, 230, 230),
+        2,
+        cv2.LINE_AA,
+    )
+
+    results = detect_edge_watermarks(frame, min_confidence=0.30)
+
+    assert results
+    assert results[0].anchor == "bottom-right"
+    assert np.any(results[0].mask)
+
+
 def test_dynamic_detector_rejects_plain_frame() -> None:
     frame = np.full((720, 1280, 3), (35, 45, 60), dtype=np.uint8)
     assert detect_edge_watermarks(frame) == []
