@@ -43,8 +43,9 @@ The example below was processed locally with dynamic mode. The original
 `Dola AI` watermark moves between multiple edge positions and fades during
 transitions. Both files are included so the result can be reproduced.
 
-- [Input video with the moving watermark](examples/dola-car-moving-input.mp4)
-- [Cleaned output video](examples/dola-car-moving-dynamic-clean-final.mp4)
+| Before: input with watermark | After: cleaned output |
+| --- | --- |
+| [Open the input video](examples/dola-car-moving-input.mp4) | [Open the cleaned output](examples/dola-car-moving-dynamic-clean-final.mp4) |
 
 Command used:
 
