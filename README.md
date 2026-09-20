@@ -45,7 +45,7 @@ transitions. Both files are included so the result can be reproduced.
 
 | Before: input with watermark | After: cleaned output |
 | --- | --- |
-| [Open the input video](examples/dola-car-moving-input.mp4) | [Open the cleaned output](examples/dola-car-moving-dynamic-clean-final.mp4) |
+| [![Input video preview](examples/dola-car-moving-input-preview.gif)](examples/dola-car-moving-input.mp4) | [![Cleaned output preview](examples/dola-car-moving-output-preview.gif)](examples/dola-car-moving-dynamic-clean-final.mp4) |
 
 Command used:
 
