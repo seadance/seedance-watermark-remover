@@ -7,10 +7,12 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .detector import detect_watermark, mask_for_crops, sample_corner_frames
-from .models import Corner, Detection, Region
-from .preview import write_preview
-from .video import open_video, process_video
+from detector import detect_watermark, mask_for_crops, sample_corner_frames
+from dynamic import DynamicDetection, detect_edge_watermarks
+from models import Corner, Detection, Region
+from preview import write_dynamic_preview, write_preview
+from version import __version__
+from video import open_video, process_video, process_video_dynamic
 
 
 def parse_region(value: str) -> Region:
@@ -39,6 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-o", "--output", type=Path, help="output MP4 path")
     parser.add_argument("--region", type=parse_region, help="manual x,y,width,height region")
     parser.add_argument(
+        "--dynamic",
+        action="store_true",
+        help="track a pale watermark that moves between edge positions",
+    )
+    parser.add_argument(
         "--corner",
         choices=[corner.value for corner in Corner],
         default=Corner.AUTO.value,
@@ -49,6 +56,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.18,
         help="minimum automatic-detection confidence (default: 0.18)",
+    )
+    parser.add_argument(
+        "--dynamic-threshold",
+        type=float,
+        default=0.45,
+        help="minimum per-frame dynamic-detection confidence (default: 0.45)",
     )
     parser.add_argument(
         "--mask",
@@ -69,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="write a preview without processing the video",
     )
     parser.add_argument("--overwrite", action="store_true", help="replace an existing output")
-    parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
 
 
@@ -88,8 +101,14 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError(f"input file does not exist: {input_path}")
     if not 0.0 <= args.threshold <= 1.0:
         raise ValueError("threshold must be between 0 and 1")
+    if not 0.0 <= args.dynamic_threshold <= 1.0:
+        raise ValueError("dynamic threshold must be between 0 and 1")
     if not 1 <= args.radius <= 20:
         raise ValueError("radius must be between 1 and 20")
+    if args.dynamic and args.region is not None:
+        raise ValueError("--dynamic and --region cannot be used together")
+    if args.dynamic and args.mask == "rectangle":
+        raise ValueError("--dynamic builds its own per-frame masks; omit --mask rectangle")
 
     output_path = (
         args.output.expanduser().resolve()
@@ -105,6 +124,10 @@ def run(args: argparse.Namespace) -> None:
         raise ValueError("output must not overwrite the input video")
     if output_path.exists() and not args.overwrite and not args.preview_only:
         raise ValueError(f"output already exists; pass --overwrite: {output_path}")
+
+    if args.dynamic:
+        _run_dynamic(args, input_path, output_path, preview_path)
+        return
 
     capture, info = open_video(input_path)
     samples = sample_corner_frames(capture, info)
@@ -170,6 +193,74 @@ def run(args: argparse.Namespace) -> None:
 
     process_video(input_path, output_path, region, mask, radius=args.radius, progress=report)
     print(f"Output: {output_path}")
+
+
+def _run_dynamic(
+    args: argparse.Namespace,
+    input_path: Path,
+    output_path: Path,
+    preview_path: Path,
+) -> None:
+    preview = _find_dynamic_preview(input_path, args.dynamic_threshold)
+    if preview is None:
+        raise ValueError(
+            "dynamic detection found no edge watermark; lower --dynamic-threshold "
+            "or use --region x,y,width,height"
+        )
+    preview_frame, preview_detections = preview
+    write_dynamic_preview(preview_frame, preview_path, preview_detections)
+    print(f"Preview: {preview_path}")
+    print(
+        "Dynamic detection: "
+        + ", ".join(
+            f"{item.anchor} confidence={item.confidence:.3f}"
+            for item in preview_detections
+        )
+    )
+    if args.preview_only:
+        return
+
+    last_percent = -1
+
+    def report(processed: int, total: int) -> None:
+        nonlocal last_percent
+        percent = min(100, round(processed * 100 / max(total, 1)))
+        if percent != last_percent and (percent % 5 == 0 or processed == total):
+            print(f"Processing: {percent}%")
+            last_percent = percent
+
+    repaired, total = process_video_dynamic(
+        input_path,
+        output_path,
+        radius=args.radius,
+        min_confidence=args.dynamic_threshold,
+        progress=report,
+    )
+    print(f"Dynamic masks applied: {repaired}/{total} frames")
+    print(f"Output: {output_path}")
+
+
+def _find_dynamic_preview(
+    input_path: Path,
+    min_confidence: float,
+) -> tuple[np.ndarray, list[DynamicDetection]] | None:
+    capture, info = open_video(input_path)
+    step = max(1, round(info.fps / 5))
+    limit = min(info.frame_count, round(info.fps * 10))
+    try:
+        for frame_index in range(0, limit, step):
+            capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+            ok, frame = capture.read()
+            if not ok:
+                continue
+            detections = detect_edge_watermarks(
+                frame, min_confidence=min_confidence
+            )
+            if detections:
+                return frame, detections
+    finally:
+        capture.release()
+    return None
 
 
 def _read_manual_crops(

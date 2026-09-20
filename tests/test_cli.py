@@ -2,8 +2,8 @@ import argparse
 
 import pytest
 
-from seedance_watermark_remover.cli import parse_region
-from seedance_watermark_remover.models import Region
+from cli import parse_region
+from models import Region
 
 
 def test_parse_region() -> None:
@@ -14,4 +14,3 @@ def test_parse_region() -> None:
 def test_parse_region_rejects_invalid_value(value: str) -> None:
     with pytest.raises(argparse.ArgumentTypeError):
         parse_region(value)
-

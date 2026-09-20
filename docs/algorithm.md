@@ -33,23 +33,39 @@ components, closes gaps inside glyphs, and adds a small dilation margin for
 anti-aliased edges. Rectangle mode masks the entire selected region and should
 only be used when a sparse mask leaves visible remnants.
 
+## Dynamic edge detection
+
+`--dynamic` pre-scans every frame at eight edge anchors: the four corners plus
+the center of each edge. It looks for aligned components formed by bright,
+low-saturation local detail and compares their silhouette with the `Dola AI`
+wordmark. Strong matches become temporal anchors. Nearby faint matches and
+short edge-transition frames inherit the trusted position, so a fade does not
+leave half of the wordmark behind. Up to two masks may be repaired during a
+cross-fade between positions.
+
+Dynamic mode is opt-in because bright scene text or a logo near an edge can
+have similar geometry. Raising `--dynamic-threshold` reduces false positives;
+lowering it retains more faint transition frames.
+
 ## Frame processing
 
-Frames are decoded one at a time with OpenCV. The selected pixels are repaired
-with the Telea fast-marching inpainting method. Repaired BGR frames are written
-to an FFmpeg stdin pipe and encoded as H.264. A second FFmpeg pass copies the
-input audio stream into the final MP4.
+Static frames are decoded once. Dynamic mode performs a detection pre-scan and
+then decodes again for repair; it retains only small masks and metadata, not
+full frames. Each mask is placed inside a padded crop so Telea has known pixels
+surrounding the repair area. This also makes a fully masked manual rectangle
+functional. Repaired BGR frames are written to an FFmpeg stdin pipe and encoded
+as H.264. A second FFmpeg pass copies the input audio stream into the final MP4.
 
-This avoids a directory of lossless frames and keeps memory approximately
-constant as video duration increases.
+This avoids a directory of lossless frames. Frame memory remains bounded;
+dynamic timeline metadata grows modestly with video duration.
 
 ## Known limitations
 
-- Frame-independent inpainting can flicker on detailed moving backgrounds.
-- A watermark outside the inspected corner area requires `--region`.
+- Spatial inpainting can flicker on detailed moving backgrounds.
+- Static mode only inspects corners; dynamic mode inspects eight edge anchors.
+- A watermark outside those areas requires `--region`.
 - Static scene edges can resemble watermark text; confidence checks reduce but
   cannot eliminate this ambiguity.
 - The tool cannot reconstruct details that were never visible under an opaque
   mark. It generates a plausible local fill.
 - Visible removal does not imply removal of invisible provenance signals.
-

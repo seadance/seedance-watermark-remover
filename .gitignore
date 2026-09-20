@@ -17,4 +17,4 @@ dist/
 *.jpg
 *.jpeg
 !docs/*.png
-
+!examples/*.mp4

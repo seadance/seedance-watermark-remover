@@ -5,7 +5,7 @@ from collections.abc import Iterable
 import cv2
 import numpy as np
 
-from .models import Corner, Detection, Region, VideoInfo
+from models import Corner, Detection, Region, VideoInfo
 
 _CORNER_ORDER = (
     Corner.TOP_LEFT,

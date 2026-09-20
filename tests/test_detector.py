@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
 
-from seedance_watermark_remover.detector import detect_watermark
-from seedance_watermark_remover.models import Corner
+from detector import detect_watermark
+from dynamic import detect_edge_watermarks
+from models import Corner
 
 
 def _corner_samples(with_watermark: bool) -> dict[Corner, list[np.ndarray]]:
@@ -46,3 +47,43 @@ def test_rejects_scene_without_text_at_normal_threshold() -> None:
     result = detect_watermark(_corner_samples(False), 1280, 720)
     assert result is None
 
+
+def test_detects_dynamic_badge_at_middle_left_edge() -> None:
+    frame = np.full((720, 1280, 3), (35, 45, 60), dtype=np.uint8)
+    cv2.putText(
+        frame,
+        "Dola AI",
+        (24, 374),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1.15,
+        (230, 230, 230),
+        3,
+        cv2.LINE_AA,
+    )
+
+    results = detect_edge_watermarks(frame, min_confidence=0.30)
+
+    assert results
+    assert results[0].anchor == "middle-left"
+    assert np.any(results[0].mask)
+
+
+def test_dynamic_detector_rejects_plain_frame() -> None:
+    frame = np.full((720, 1280, 3), (35, 45, 60), dtype=np.uint8)
+    assert detect_edge_watermarks(frame) == []
+
+
+def test_dynamic_detector_rejects_unrelated_edge_title() -> None:
+    frame = np.full((720, 1280, 3), (35, 45, 60), dtype=np.uint8)
+    cv2.putText(
+        frame,
+        "Seedance 2.5",
+        (18, 54),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1.1,
+        (235, 235, 235),
+        3,
+        cv2.LINE_AA,
+    )
+
+    assert detect_edge_watermarks(frame, min_shape_similarity=0.30) == []

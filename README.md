@@ -16,6 +16,7 @@ detection is not confident enough.
 ## Features
 
 - Automatically searches all four corners for a small, static watermark.
+- Tracks pale moving badges across eight edge positions with dynamic mode.
 - Refuses low-confidence detections instead of modifying the wrong region.
 - Accepts a manual `x,y,width,height` region as a reliable fallback.
 - Uses a sparse text mask to preserve more of the original frame.
@@ -26,10 +27,28 @@ detection is not confident enough.
 
 ## Scope of the MVP
 
-This release targets a fixed `AI-generated` style badge in a video corner. It
-works best when the watermark is small and the surrounding background is flat
-or softly textured. It is not intended for moving watermarks, center-screen
-logos, large overlays, or marks covering faces and detailed objects.
+This release targets small `AI-generated` and `Dola AI` style badges. Static
+mode handles a fixed corner mark. Dynamic mode handles a pale text watermark
+that fades or moves between corners and other positions along the frame edge.
+It is not intended for center-screen logos, large overlays, or marks covering
+faces and detailed objects.
+
+## Real-World Example
+
+The example below was processed locally with dynamic mode. The original
+`Dola AI` watermark moves between multiple edge positions and fades during
+transitions. Both files are included so the result can be reproduced.
+
+- [Input video with the moving watermark](examples/dola-car-moving-input.mp4)
+- [Cleaned output video](examples/dola-car-moving-dynamic-clean-final.mp4)
+
+Command used:
+
+```bash
+seedance-watermark-remover examples/dola-car-moving-input.mp4 \
+  --dynamic \
+  -o cleaned-example.mp4
+```
 
 ## Installation
 
@@ -58,6 +77,12 @@ Try automatic detection:
 seedance-watermark-remover input.mp4 -o clean.mp4
 ```
 
+Track a moving Dola/Seedance watermark along the video edges:
+
+```bash
+seedance-watermark-remover input.mp4 -o clean.mp4 --dynamic
+```
+
 Automatic mode writes a detection preview before processing. If confidence is
 too low, no output video is created and the command asks for a manual region.
 
@@ -79,6 +104,8 @@ Useful options:
 
 ```text
 --region X,Y,W,H       Use an exact watermark rectangle
+--dynamic              Build and apply a separate edge mask on every frame
+--dynamic-threshold N  Set dynamic per-frame confidence
 --corner POSITION      Restrict detection to one corner
 --threshold FLOAT      Minimum automatic-detection confidence
 --mask text|rectangle  Sparse text mask or full rectangle
@@ -91,9 +118,10 @@ Run `seedance-watermark-remover --help` for the complete CLI reference.
 
 ## Remove a Seedance 2.5 Watermark
 
-To **remove a Seedance 2.5 watermark**, first try automatic detection. If the
-badge is inset farther from the corner, changes position, or the preview covers
-real scene details, pass a manual region. Manual confirmation is deliberately
+To **remove a Seedance 2.5 watermark**, first try automatic detection. Add
+`--dynamic` when a `Dola AI` style badge moves or fades between edge positions.
+If a fixed badge is inset farther from the corner or the preview covers real
+scene details, pass a manual region. Manual confirmation is deliberately
 preferred over silently damaging the video.
 
 The current release uses spatial inpainting independently on each frame. Very
@@ -104,12 +132,14 @@ set of real-world samples is available.
 ## How It Works
 
 1. Sample a bounded number of frames without loading the full video into RAM.
-2. Inspect corner regions for stable, text-like edges.
-3. Require both an absolute confidence threshold and separation from the
-   second-best corner.
-4. Build a mask from stable edges and morphological components.
-5. Inpaint only the masked pixels with OpenCV Telea.
-6. Stream repaired frames to FFmpeg and remux the original audio.
+2. Inspect corner regions for stable text, or eight edge positions per frame in
+   dynamic mode.
+3. Require geometric, wordmark-shape, and confidence checks before accepting a
+   dynamic candidate.
+4. Use strong dynamic matches as temporal anchors for faint transition frames.
+5. Build masks that include anti-aliased edges and short edge transitions.
+6. Inpaint the mask with surrounding context using OpenCV Telea.
+7. Stream repaired frames to FFmpeg and remux the original audio.
 
 See [docs/algorithm.md](docs/algorithm.md) for implementation details and known
 limitations.
@@ -131,4 +161,3 @@ after a successful or failed run.
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
