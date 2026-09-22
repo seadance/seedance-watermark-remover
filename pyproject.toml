@@ -44,8 +44,9 @@ dev = [
 seedance-watermark-remover = "cli:main"
 
 [project.urls]
-Repository = "https://github.com/seadance/seedance-watermark-remover"
-Issues = "https://github.com/seadance/seedance-watermark-remover/issues"
+Homepage = "https://seeora.app/"
+Repository = "https://github.com/seeora/seedance-watermark-remover"
+Issues = "https://github.com/seeora/seedance-watermark-remover/issues"
 
 [tool.hatch.build.targets.wheel]
 only-include = ["src"]

@@ -9,8 +9,8 @@ original audio stream, and provides a manual selection fallback when automatic
 detection is not confident enough.
 
 Prefer a browser-based workflow? Try the
-[Seedance Watermark Remover](https://seadance.app/seedance-watermark-remover)
-on Seadance AI.
+[Seedance Watermark Remover](https://seeora.app/)
+on Seeora.
 
 > [!IMPORTANT]
 > Only remove watermarks from content you own or have permission to modify.
@@ -37,22 +37,25 @@ that fades or moves between corners and other positions along the frame edge.
 It is not intended for center-screen logos, large overlays, or marks covering
 faces and detailed objects.
 
-## Real-World Example
+## Seeora.app Example
 
-The example below was processed locally with dynamic mode. The original
-`Dola AI` watermark moves between multiple edge positions and fades during
-transitions. Both files are included so the result can be reproduced.
+The example below uses a copy of the Seedance 2.5 `sky-train-seasons-v1` video
+with a fixed `seeora.app` watermark added in the top-right corner. It was
+processed locally with a fixed manual region, and both files are included so
+the result can be reproduced.
 
 | Before: input with watermark | After: cleaned output |
 | --- | --- |
-| [![Input video preview](examples/dola-car-moving-input-preview.gif)](examples/dola-car-moving-input.mp4) | [![Cleaned output preview](examples/dola-car-moving-output-preview.gif)](examples/dola-car-moving-dynamic-clean-final.mp4) |
+| [![Input video preview](examples/seeora-watermark-input-preview.gif)](examples/seeora-watermark-input.mp4) | [![Cleaned output preview](examples/seeora-watermark-clean-preview.gif)](examples/seeora-watermark-clean.mp4) |
 
 Command used:
 
 ```bash
-seedance-watermark-remover examples/dola-car-moving-input.mp4 \
-  --dynamic \
-  -o cleaned-example.mp4
+seedance-watermark-remover examples/seeora-watermark-input.mp4 \
+  --region 1105,43,152,32 \
+  --mask rectangle \
+  --radius 12 \
+  -o seeora-watermark-clean-reproduced.mp4
 ```
 
 ## Installation
@@ -65,7 +68,7 @@ Requirements:
 Install from source:
 
 ```bash
-git clone https://github.com/seadance/seedance-watermark-remover.git
+git clone https://github.com/seeora/seedance-watermark-remover.git
 cd seedance-watermark-remover
 python -m venv .venv
 source .venv/bin/activate
