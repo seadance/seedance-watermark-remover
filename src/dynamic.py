@@ -275,5 +275,5 @@ def _dice_similarity(left: np.ndarray, right: np.ndarray) -> float:
 
 _WORDMARK_TEMPLATES = (
     _DOLA_TEMPLATE > 0,
-    _wordmark_template("seadance.app"),
+    _wordmark_template("seeora.app"),
 )
